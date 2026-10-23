@@ -9,7 +9,7 @@ class UpnpException(val code: Int?, val description: String) :
 class SoapClient(private val timeoutMs: Int = 5000) {
 
     /** Invokes [action] and returns its out arguments by name. */
-    fun call(controlUrl: String, serviceType: String, action: String, args: List<Pair<String, String>>): Map<String, String> {
+    suspend fun call(controlUrl: String, serviceType: String, action: String, args: List<Pair<String, String>>): Map<String, String> {
         val response = SimpleHttp.post(
             controlUrl,
             mapOf(

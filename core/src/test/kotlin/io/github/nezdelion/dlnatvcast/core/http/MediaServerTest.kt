@@ -247,3 +247,17 @@ class MediaServerTest {
         }
     }
 }
+
+class MediaServerLocaleTest {
+    @org.junit.jupiter.api.Test
+    fun `token is lowercase ASCII hex in any locale`() {
+        val saved = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar-EG"))
+            val token = MediaServer(emptyList(), java.net.InetAddress.getLoopbackAddress()).token
+            org.junit.jupiter.api.Assertions.assertTrue(token.matches(Regex("[0-9a-f]{32}")), token)
+        } finally {
+            java.util.Locale.setDefault(saved)
+        }
+    }
+}

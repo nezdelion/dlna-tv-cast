@@ -3,8 +3,6 @@ package io.github.nezdelion.dlnatvcast.core.upnp
 import io.github.nezdelion.dlnatvcast.core.session.PositionInfo
 import io.github.nezdelion.dlnatvcast.core.session.RendererClient
 import io.github.nezdelion.dlnatvcast.core.session.TransportState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class UpnpRendererClient(
     val device: RendererDevice,
@@ -14,15 +12,11 @@ class UpnpRendererClient(
     override val hasRenderingControl: Boolean get() = device.renderingControlUrl != null
 
     private suspend fun avt(action: String, vararg args: Pair<String, String>): Map<String, String> =
-        withContext(Dispatchers.IO) {
-            soap.call(device.avTransportControlUrl, device.avTransportType, action, listOf(INSTANCE) + args)
-        }
+        soap.call(device.avTransportControlUrl, device.avTransportType, action, listOf(INSTANCE) + args)
 
     private suspend fun rcs(action: String, vararg args: Pair<String, String>): Map<String, String> {
         val url = device.renderingControlUrl ?: throw UpnpException(null, "Renderer has no volume control")
-        return withContext(Dispatchers.IO) {
-            soap.call(url, device.renderingControlType, action, listOf(INSTANCE, CHANNEL) + args)
-        }
+        return soap.call(url, device.renderingControlType, action, listOf(INSTANCE, CHANNEL) + args)
     }
 
     override suspend fun setUri(url: String, metadata: String) {

@@ -40,6 +40,17 @@ object DeviceDescription {
             throw InvalidRendererException("Device description is not valid XML", e)
         }
         val base = root.childText("URLBase")?.takeIf { it.isNotEmpty() } ?: location
+        return try {
+            findRenderer(root, base, location)
+        } catch (e: InvalidRendererException) {
+            throw e
+        } catch (e: Exception) {
+            // Malformed URLs (URISyntaxException, IllegalArgumentException) and anything else odd.
+            throw InvalidRendererException("Invalid device description", e)
+        }
+    }
+
+    private fun findRenderer(root: org.w3c.dom.Element, base: String, location: String): RendererDevice {
         val devices = buildList {
             root.child("device")?.let { add(it) }
             addAll(root.descendants("device").filterNot { it == root.child("device") })
@@ -59,8 +70,8 @@ object DeviceDescription {
                 udn = udn,
                 friendlyName = device.childText("friendlyName")?.takeIf { it.isNotEmpty() } ?: udn,
                 location = location,
-                avTransportControlUrl = resolve(base, avtControl),
-                renderingControlUrl = rcs?.childText("controlURL")?.takeIf { it.isNotEmpty() }?.let { resolve(base, it) },
+                avTransportControlUrl = httpUrl(base, avtControl),
+                renderingControlUrl = rcs?.childText("controlURL")?.takeIf { it.isNotEmpty() }?.let { httpUrl(base, it) },
                 avTransportType = avt.childText("serviceType")!!,
                 renderingControlType = rcs?.childText("serviceType") ?: RendererDevice.RENDERING_CONTROL_V1,
             )
@@ -69,13 +80,13 @@ object DeviceDescription {
     }
 
     /** Fetches and parses [location]. */
-    fun fetch(location: String, timeoutMs: Int = 3000): RendererDevice {
+    suspend fun fetch(location: String, timeoutMs: Int = 3000): RendererDevice {
         val uri = try {
             URI(location.trim())
         } catch (e: Exception) {
             throw InvalidRendererException("Invalid URL", e)
         }
-        if (uri.scheme !in setOf("http", "https") || uri.host.isNullOrEmpty()) {
+        if (uri.scheme != "http" || uri.host.isNullOrEmpty()) {
             throw InvalidRendererException("URL must start with http://")
         }
         val response = try {
@@ -85,6 +96,20 @@ object DeviceDescription {
         }
         if (response.status != 200) throw InvalidRendererException("HTTP ${response.status}")
         return parse(response.body, uri.toString())
+    }
+
+    /** Resolves [reference] against [base] and insists on an absolute http URL with a host. */
+    private fun httpUrl(base: String, reference: String): String {
+        val resolved = resolve(base, reference)
+        val uri = try {
+            URI(resolved)
+        } catch (e: Exception) {
+            throw InvalidRendererException("Invalid service URL", e)
+        }
+        if (uri.scheme != "http" || uri.host.isNullOrEmpty()) {
+            throw InvalidRendererException("Service URL must be http: $resolved")
+        }
+        return resolved
     }
 
     internal fun resolve(base: String, reference: String): String {

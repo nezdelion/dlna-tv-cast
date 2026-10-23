@@ -52,7 +52,7 @@ class RealRendererTest {
         video("long.mp4", "testsrc=size=640x360:rate=25", 20)
         video("first.mp4", "smptebars=size=640x360:rate=25", 4)
         video("second.mp4", "testsrc2=size=640x360:rate=25", 4)
-        client = UpnpRendererClient(DeviceDescription.fetch(location))
+        client = UpnpRendererClient(runBlocking { DeviceDescription.fetch(location) })
         val host = URI(location).host
         localAddress = DatagramSocket().use {
             it.connect(InetSocketAddress(host, 9))

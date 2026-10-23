@@ -3,6 +3,7 @@ package io.github.nezdelion.dlnatvcast.core.upnp
 import io.github.nezdelion.dlnatvcast.core.Fixtures
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -67,17 +68,17 @@ class DeviceDescriptionTest {
     }
 
     @Test
-    fun `fetch validates over HTTP`() {
+    fun `fetch validates over HTTP`() = runBlocking {
         TestHttpServer().start().use { http ->
             http.respond("/description.xml", 200, Fixtures.text("tv-renderer-description.xml"))
             http.respond("/missing", 404, "")
             val d = DeviceDescription.fetch("${http.base}/description.xml")
             assertEquals("TV", d.friendlyName)
             assertEquals("${http.base}/control/AVTransport", d.avTransportControlUrl)
-            assertThrows<InvalidRendererException> { DeviceDescription.fetch("${http.base}/missing") }
-            assertThrows<InvalidRendererException> { DeviceDescription.fetch("ftp://x/y") }
-            assertThrows<InvalidRendererException> { DeviceDescription.fetch("not a url") }
-            assertThrows<InvalidRendererException> { DeviceDescription.fetch("http://127.0.0.1:1/description.xml", 500) }
+            assertThrows<InvalidRendererException> { runBlocking { DeviceDescription.fetch("${http.base}/missing") } }
+            assertThrows<InvalidRendererException> { runBlocking { DeviceDescription.fetch("ftp://x/y") } }
+            assertThrows<InvalidRendererException> { runBlocking { DeviceDescription.fetch("not a url") } }
+            assertThrows<InvalidRendererException> { runBlocking { DeviceDescription.fetch("http://127.0.0.1:1/description.xml", 500) } }
         }
     }
 }

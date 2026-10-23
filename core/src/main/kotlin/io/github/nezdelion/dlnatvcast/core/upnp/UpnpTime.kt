@@ -1,10 +1,12 @@
 package io.github.nezdelion.dlnatvcast.core.upnp
 
+import java.util.Locale
+
 /** UPnP AV time strings (`H+:MM:SS[.F+]`). */
 object UpnpTime {
     fun format(seconds: Long): String {
         val s = seconds.coerceAtLeast(0)
-        return "%d:%02d:%02d".format(s / 3600, (s / 60) % 60, s % 60)
+        return String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60)
     }
 
     /** Returns whole seconds, or null for `NOT_IMPLEMENTED`, empty or malformed values. */
