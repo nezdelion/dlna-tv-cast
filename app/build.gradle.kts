@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.nezdelion.tvcast"
+    namespace = "io.github.nezdelion.dlnatvcast"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.nezdelion.tvcast"
+        applicationId = "io.github.nezdelion.dlnatvcast"
         minSdk = 29
         targetSdk = 36
         versionCode = 1

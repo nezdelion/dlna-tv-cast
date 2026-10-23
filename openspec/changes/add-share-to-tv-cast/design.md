@@ -39,7 +39,7 @@ Alternative: Cling/jUPnP — heavy, Cling is abandoned, jUPnP pulls Jetty/OSGi-e
 - `CastService`: foreground service type `mediaPlayback`, owns `CastSession` and the HTTP server, `MediaSessionCompat`-free media-style notification (plain `NotificationCompat.MediaStyle` with actions) to avoid hijacking phone media buttons; stops itself when the session ends.
 - UI: Jetpack Compose, two screens (renderer picker with manual-add dialog, remote control). Material 3.
 - Persistence: `SharedPreferences` (last renderer UDN + location, manual renderers list).
-- `minSdk 29` (Android 10), `targetSdk 36`, `compileSdk 36`. Package `io.github.nezdelion.tvcast`.
+- `minSdk 29` (Android 10), `targetSdk 36`, `compileSdk 36`. Package `io.github.nezdelion.dlnatvcast`.
 
 ### 7. Testing strategy
 - `core` unit tests (JUnit 5): range parsing and responses against a real socket, DIDL-Lite escaping, SOAP envelope/fault parsing, SSDP response parsing, state-machine transitions with a fake renderer.
@@ -62,4 +62,4 @@ New app; nothing to migrate. Install with `adb install -r app/build/outputs/apk/
 
 ## Open Questions
 
-- App name on the share sheet ("TV Cast" for now) and icon — cosmetic, can change any time.
+- App icon — cosmetic, can change any time. (Resolved: the app name on the launcher and share sheet is "DLNA TV Cast".)

@@ -4,7 +4,7 @@ Casting a photo or video from an Android phone to a DLNA TV/renderer today needs
 
 ## What Changes
 
-- New Android app (Kotlin) that appears in the system Share sheet for images, videos and audio, single or multiple items.
+- New Android app "DLNA TV Cast" (Kotlin, package `io.github.nezdelion.dlnatvcast`) that appears in the system Share sheet for images, videos and audio, single or multiple items.
 - The app streams shared items from the phone over HTTP with byte-range support, so renderers can start playback without waiting for the full file.
 - The app discovers DLNA/UPnP MediaRenderers on the local network, remembers the last one used, and allows adding a renderer manually by its description URL.
 - The app sends shared items to the selected renderer and provides a remote-control screen: play/pause, seek, stop, previous/next within the shared batch, volume.

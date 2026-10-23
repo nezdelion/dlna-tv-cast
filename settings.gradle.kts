@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "tv-cast"
+rootProject.name = "dlna-tv-cast"
 include(":core", ":app")

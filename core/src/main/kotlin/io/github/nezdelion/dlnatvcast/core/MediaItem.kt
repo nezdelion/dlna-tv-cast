@@ -1,6 +1,6 @@
-package io.github.nezdelion.tvcast.core
+package io.github.nezdelion.dlnatvcast.core
 
-import io.github.nezdelion.tvcast.core.http.ByteSource
+import io.github.nezdelion.dlnatvcast.core.http.ByteSource
 
 enum class MediaKind {
     IMAGE, VIDEO, AUDIO;

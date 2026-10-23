@@ -1,6 +1,6 @@
-package io.github.nezdelion.tvcast.core.http
+package io.github.nezdelion.dlnatvcast.core.http
 
-import io.github.nezdelion.tvcast.core.MediaItem
+import io.github.nezdelion.dlnatvcast.core.MediaItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -257,7 +257,7 @@ class MediaServer(
         private const val IDLE_TIMEOUT_MS = 60_000
         private const val MAX_LINE = 8 * 1024
         private const val MAX_HEADERS = 100
-        private const val SERVER_HEADER = "Android UPnP/1.0 tv-cast/1.0"
+        private const val SERVER_HEADER = "Android UPnP/1.0 dlna-tv-cast/1.0"
 
         private fun randomToken(): String {
             val bytes = ByteArray(16)

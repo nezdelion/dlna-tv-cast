@@ -1,6 +1,6 @@
 ## 1. Project setup
 
-- [x] 1.1 Create Gradle wrapper project with `core` (Kotlin/JVM) and `app` (Android, Compose, minSdk 29, target/compile 36, package `io.github.nezdelion.tvcast`) modules, `.gitignore`, version catalog; verify `./gradlew build` succeeds and produces a debug APK
+- [x] 1.1 Create Gradle wrapper project with `core` (Kotlin/JVM) and `app` (Android, Compose, minSdk 29, target/compile 36, package `io.github.nezdelion.dlnatvcast`) modules, `.gitignore`, version catalog; verify `./gradlew build` succeeds and produces a debug APK
 - [x] 1.2 Add JUnit 5 + kotlinx-coroutines-test to `core`; verify a placeholder test runs in `./gradlew :core:test`
 
 ## 2. Core: HTTP streaming

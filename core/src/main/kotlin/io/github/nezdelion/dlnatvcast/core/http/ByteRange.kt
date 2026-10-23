@@ -1,4 +1,4 @@
-package io.github.nezdelion.tvcast.core.http
+package io.github.nezdelion.dlnatvcast.core.http
 
 sealed interface ByteRange {
     /** Serve the whole entity with 200. */

@@ -1,4 +1,4 @@
-package io.github.nezdelion.tvcast.core.http
+package io.github.nezdelion.dlnatvcast.core.http
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest

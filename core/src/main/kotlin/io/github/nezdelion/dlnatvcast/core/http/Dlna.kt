@@ -1,6 +1,6 @@
-package io.github.nezdelion.tvcast.core.http
+package io.github.nezdelion.dlnatvcast.core.http
 
-import io.github.nezdelion.tvcast.core.MediaKind
+import io.github.nezdelion.dlnatvcast.core.MediaKind
 
 /** DLNA header and protocolInfo values shared by the HTTP server and DIDL-Lite metadata. */
 object Dlna {

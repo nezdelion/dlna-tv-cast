@@ -1,6 +1,6 @@
-package io.github.nezdelion.tvcast.core.http
+package io.github.nezdelion.dlnatvcast.core.http
 
-import io.github.nezdelion.tvcast.core.MediaItem
+import io.github.nezdelion.dlnatvcast.core.MediaItem
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals

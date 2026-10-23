@@ -1,4 +1,4 @@
-package io.github.nezdelion.tvcast.core.http
+package io.github.nezdelion.dlnatvcast.core.http
 
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream

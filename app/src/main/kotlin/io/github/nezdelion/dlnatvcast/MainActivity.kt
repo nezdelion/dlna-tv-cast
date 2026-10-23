@@ -1,4 +1,4 @@
-package io.github.nezdelion.tvcast
+package io.github.nezdelion.dlnatvcast
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Text("TV Cast")
+                Text("DLNA TV Cast")
             }
         }
     }
