@@ -17,57 +17,69 @@ class FakeRenderer(override val hasRenderingControl: Boolean = true) : RendererC
     var lastMetadata: String? = null
     var uri: String? = null
 
+    /** Runs after a call is recorded and before it takes effect; may suspend, delay or throw. */
+    var hook: suspend (action: String) -> Unit = {}
+    var clock: () -> Long = { 0 }
+    val timeline = mutableListOf<Pair<Long, String>>()
+
     private fun reach() {
         if (unreachable) throw IOException("connect timed out")
+    }
+
+    private suspend fun enter(action: String) {
+        reach()
+        calls += action
+        timeline += clock() to action
+        hook(action)
     }
 
     val commands: List<String> get() = calls.filterNot { it == "GetTransportInfo" || it == "GetPositionInfo" || it == "GetVolume" || it == "GetMute" }
 
     override suspend fun setUri(url: String, metadata: String) {
-        reach(); calls += "SetAVTransportURI $url"
+        enter("SetAVTransportURI $url")
         faultOnSetUri?.let { throw it }
         uri = url; lastMetadata = metadata; state = TransportState.STOPPED
     }
 
     override suspend fun play() {
-        reach(); calls += "Play"; state = TransportState.PLAYING; if (position == null) position = 0
+        enter("Play"); state = TransportState.PLAYING; if (position == null) position = 0
     }
 
     override suspend fun pause() {
-        reach(); calls += "Pause"; state = TransportState.PAUSED_PLAYBACK
+        enter("Pause"); state = TransportState.PAUSED_PLAYBACK
     }
 
     override suspend fun stop() {
-        reach(); calls += "Stop"; state = TransportState.STOPPED; position = null
+        enter("Stop"); state = TransportState.STOPPED; position = null
     }
 
     override suspend fun seek(positionSec: Long) {
-        reach(); calls += "Seek $positionSec"; position = positionSec
+        enter("Seek $positionSec"); position = positionSec
     }
 
     override suspend fun transportState(): TransportState {
-        reach(); calls += "GetTransportInfo"; return state
+        enter("GetTransportInfo"); return state
     }
 
     override suspend fun positionInfo(): PositionInfo {
-        reach(); calls += "GetPositionInfo"
+        enter("GetPositionInfo")
         val playing = state == TransportState.PLAYING || state == TransportState.PAUSED_PLAYBACK
         return PositionInfo(if (playing) position else 0, if (playing) duration else null)
     }
 
     override suspend fun volume(): Int {
-        reach(); calls += "GetVolume"; return vol
+        enter("GetVolume"); return vol
     }
 
     override suspend fun setVolume(volume: Int) {
-        reach(); calls += "SetVolume $volume"; vol = volume
+        enter("SetVolume $volume"); vol = volume
     }
 
     override suspend fun muted(): Boolean {
-        reach(); calls += "GetMute"; return mute
+        enter("GetMute"); return mute
     }
 
     override suspend fun setMuted(muted: Boolean) {
-        reach(); calls += "SetMute $muted"; mute = muted
+        enter("SetMute $muted"); mute = muted
     }
 }

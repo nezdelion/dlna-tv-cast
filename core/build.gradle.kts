@@ -15,6 +15,11 @@ kotlin {
     }
 }
 
+// kotlinx-coroutines-test's virtual-time API is still marked experimental.
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestKotlin") {
+    compilerOptions.optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
+}
+
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
