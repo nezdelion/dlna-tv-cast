@@ -88,14 +88,18 @@ class MediaServerTest {
     }
 
     @Test
-    fun `unknown paths and wrong token are 404 without file names`() = client().use { c ->
+    fun `unknown paths and wrong token are 404 without file names`() {
         val wrongToken = path(0).replace(server.token, "0".repeat(32))
         for (p in listOf("/", "/${server.token}", "/${server.token}/7/x.jpg", "/${server.token}/abc/x", wrongToken)) {
-            val r = c.request("GET", p)
-            assertEquals(404, r.status, p)
-            assertFalse(String(r.body).contains("Holiday"), p)
+            client().use { c ->
+                val r = c.request("GET", p)
+                assertEquals(404, r.status, p)
+                assertFalse(String(r.body).contains("Holiday"), p)
+                // A client without the token is not kept around.
+                assertEquals("close", r.header("Connection"), p)
+            }
         }
-        assertEquals(404, c.request("HEAD", "/").status)
+        client().use { c -> assertEquals(404, c.request("HEAD", "/").status) }
     }
 
     @Test
@@ -259,5 +263,82 @@ class MediaServerLocaleTest {
         } finally {
             java.util.Locale.setDefault(saved)
         }
+    }
+}
+
+/** Review #10: unauthenticated connections must not starve real requests. */
+class MediaServerAbuseTest {
+    private val data = ByteArray(4096) { it.toByte() }
+
+    @org.junit.jupiter.api.Test
+    fun `authorized GET completes while many idle connections are open`() {
+        MediaServer(listOf(MediaItem("a.mp4", ByteArraySource(data, "video/mp4"))), InetAddress.getLoopbackAddress()).start().use { s ->
+            val idle = (1..100).map { Socket(InetAddress.getLoopbackAddress(), s.localPort) }
+            try {
+                val start = System.nanoTime()
+                val r = RawHttpClient(s.localPort).use { it.request("GET", URI(s.urlFor(0)).rawPath) }
+                val ms = (System.nanoTime() - start) / 1_000_000
+                assertEquals(200, r.status)
+                assertTrue(ms < 2_000, "took $ms ms")
+            } finally {
+                idle.forEach { it.close() }
+            }
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    fun `slow header sender is cut off at the header deadline`() {
+        MediaServer(
+            listOf(MediaItem("a.mp4", ByteArraySource(data, "video/mp4"))),
+            InetAddress.getLoopbackAddress(),
+            headerDeadlineMs = 500,
+        ).start().use { s ->
+            Socket(InetAddress.getLoopbackAddress(), s.localPort).use { slow ->
+                slow.soTimeout = 5_000
+                val out = slow.getOutputStream()
+                val start = System.nanoTime()
+                // One byte every 100 ms never trips a per-read timeout; only an absolute deadline stops it.
+                val closed = runCatching {
+                    repeat(40) {
+                        out.write('G'.code)
+                        out.flush()
+                        Thread.sleep(100)
+                    }
+                }.isFailure || slow.getInputStream().read() == -1
+                val ms = (System.nanoTime() - start) / 1_000_000
+                assertTrue(closed, "connection still open")
+                assertTrue(ms < 3_000, "took $ms ms")
+            }
+        }
+    }
+}
+
+/** Review #13: unknown-length items must not advertise byte seeking. */
+class UnknownLengthCapabilityTest {
+    @org.junit.jupiter.api.Test
+    fun `HTTP and DIDL agree on seekability`() {
+        val unknown = object : ByteSource {
+            override val length: Long? = null
+            override val mime = "video/mp4"
+            override fun open(offset: Long): InputStream = ByteArray(10).inputStream()
+        }
+        MediaServer(
+            listOf(MediaItem("u.mp4", unknown), MediaItem("k.mp4", ByteArraySource(ByteArray(10), "video/mp4"))),
+            InetAddress.getLoopbackAddress(),
+        ).start().use { s ->
+            RawHttpClient(s.localPort).use { c ->
+                val u = c.request("HEAD", URI(s.urlFor(0)).rawPath, "getcontentFeatures.dlna.org" to "1")
+                assertTrue(u.header("contentFeatures.dlna.org")!!.contains("DLNA.ORG_OP=00"), u.header("contentFeatures.dlna.org"))
+                assertNull(u.header("Accept-Ranges"))
+            }
+            RawHttpClient(s.localPort).use { c ->
+                val k = c.request("HEAD", URI(s.urlFor(1)).rawPath, "getcontentFeatures.dlna.org" to "1")
+                assertTrue(k.header("contentFeatures.dlna.org")!!.contains("DLNA.ORG_OP=01"))
+                assertEquals("bytes", k.header("Accept-Ranges"))
+            }
+        }
+        val kind = io.github.nezdelion.dlnatvcast.core.MediaKind.VIDEO
+        assertTrue(io.github.nezdelion.dlnatvcast.core.upnp.DidlLite.item("u", "http://h/u", "video/mp4", kind, null).contains("DLNA.ORG_OP=00"))
+        assertTrue(io.github.nezdelion.dlnatvcast.core.upnp.DidlLite.item("k", "http://h/k", "video/mp4", kind, 10).contains("DLNA.ORG_OP=01"))
     }
 }

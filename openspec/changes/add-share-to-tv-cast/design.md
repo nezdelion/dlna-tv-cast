@@ -23,7 +23,7 @@ Alternative: single module — faster to start, but protocol tests would need Ro
 Alternative: copy shared files into app cache first — simple but delays playback by the whole file, which is what we are avoiding.
 
 ### 3. Minimal HTTP/1.1 server on raw sockets
-A small coroutine-based server in `core`: `ServerSocket` bound to the Wi-Fi IPv4 address on an ephemeral port, one coroutine per connection, keep-alive, `GET`/`HEAD`, single-range parsing, DLNA headers, streaming with a fixed buffer and `Dispatchers.IO`. URL layout: `http://<ip>:<port>/<sessionToken>/<index>/<sanitised-name>.<ext>`; token = 128-bit `SecureRandom`, hex.
+A small coroutine-based server in `core`: `ServerSocket` bound to the Wi-Fi IPv4 address on an ephemeral port, one coroutine per connection, keep-alive, `GET`/`HEAD`, single-range parsing, DLNA headers, streaming with a fixed buffer and `Dispatchers.IO`. URL layout: `http://<ip>:<port>/<sessionToken>/<index>/<sanitised-name>.<ext>`; token = 128-bit `SecureRandom`, hex. Connection work runs on the server's own threads (not `Dispatchers.IO`). A new connection must deliver its request headers within an absolute 10 s deadline; at most 16 connections may be waiting for a first request (the oldest is dropped to admit a new one) and at most 16 may be serving items (further ones get 503); a request without the session token gets its 404 and the connection is closed. Items of unknown length are served whole and advertise `DLNA.ORG_OP=00`, no `Accept-Ranges`.
 Alternative: NanoHTTPD or Ktor server — NanoHTTPD is unmaintained and its range handling is DIY anyway; Ktor adds several MB and Netty/CIO complexity for ~300 lines of needed behaviour.
 
 ### 4. SSDP and SOAP by hand

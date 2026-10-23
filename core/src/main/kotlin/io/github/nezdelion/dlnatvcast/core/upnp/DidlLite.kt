@@ -18,7 +18,7 @@ object DidlLite {
         append("<item id=\"1\" parentID=\"0\" restricted=\"1\">")
         append("<dc:title>").append(Xml.escape(title)).append("</dc:title>")
         append("<upnp:class>").append(upnpClass(kind)).append("</upnp:class>")
-        append("<res protocolInfo=\"").append(Xml.escape(Dlna.protocolInfo(mime, kind))).append('"')
+        append("<res protocolInfo=\"").append(Xml.escape(Dlna.protocolInfo(mime, kind, byteSeek = size != null))).append('"')
         if (size != null) append(" size=\"").append(size).append('"')
         append('>').append(Xml.escape(url)).append("</res>")
         append("</item></DIDL-Lite>")
