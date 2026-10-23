@@ -5,6 +5,8 @@ import io.github.nezdelion.dlnatvcast.core.upnp.DidlLite
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -223,19 +225,25 @@ class CastSession(
 
     private suspend fun pollLoop() {
         while (scope.isActive) {
+            val started = now()
             mutex.withLock { pollLocked() }
             if (pollCount % timing.volumeRefreshEvery == 0) refreshVolume()
+            // Fixed rate: the interval runs from the start of the poll, so a slow renderer
+            // or network does not stretch the time until a change becomes visible.
             val interval = if (foreground) timing.foregroundPollMs else timing.backgroundPollMs
-            withTimeoutOrNull(interval) { wake.receive() }
+            val wait = interval - (now() - started)
+            if (wait > 0) withTimeoutOrNull(wait) { wake.receive() }
         }
     }
 
     private suspend fun refreshVolume() {
         if (!renderer.hasRenderingControl) return
         try {
-            val volume = renderer.volume()
-            val muted = renderer.muted()
-            _state.update { it.copy(volume = volume, muted = muted) }
+            coroutineScope {
+                val volume = async { renderer.volume() }
+                val muted = async { renderer.muted() }
+                _state.update { it.copy(volume = volume.await(), muted = muted.await()) }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: IOException) {
@@ -248,8 +256,13 @@ class CastSession(
         val transport: TransportState
         val position: PositionInfo
         try {
-            transport = renderer.transportState()
-            position = renderer.positionInfo()
+            // Both requests in parallel: each is a new TCP connection to the renderer.
+            coroutineScope {
+                val t = async { renderer.transportState() }
+                val p = async { renderer.positionInfo() }
+                transport = t.await()
+                position = p.await()
+            }
         } catch (_: IOException) {
             val t = now()
             val since = firstFailureAtMs ?: t.also { firstFailureAtMs = it }

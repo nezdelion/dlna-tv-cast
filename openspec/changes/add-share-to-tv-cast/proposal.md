@@ -23,6 +23,6 @@ Casting a photo or video from an Android phone to a DLNA TV/renderer today needs
 ## Impact
 
 - New repository content: Android app module plus a pure-Kotlin core module (no Android dependencies) for protocol logic.
-- Runtime permissions: `INTERNET`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, `FOREGROUND_SERVICE` (+ media playback type), `POST_NOTIFICATIONS`. No storage permission; shared content is read through the URIs granted by the sharing app.
+- Runtime permissions: `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, `FOREGROUND_SERVICE` (+ media playback type), `POST_NOTIFICATIONS`. No storage permission; shared content is read through the URIs granted by the sharing app.
 - Network exposure: while a session is active the phone listens on a TCP port on the Wi-Fi interface; only items from the current share are reachable, behind unguessable paths.
 - Primary acceptance target is the user's `tv-renderer` (mpv-based DMR on the PC); behaviour must stay within standard UPnP AV 1.0 so other DLNA TVs work too.

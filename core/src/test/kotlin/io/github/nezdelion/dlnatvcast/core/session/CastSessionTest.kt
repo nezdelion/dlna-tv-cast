@@ -234,6 +234,21 @@ class CastSessionTest {
     }
 
     @Test
+    fun `polling is fixed rate when the renderer is slow`() = runTest {
+        val slow = object : RendererClient by renderer {
+            override suspend fun transportState(): TransportState {
+                kotlinx.coroutines.delay(700)
+                return renderer.transportState()
+            }
+        }
+        CastSession(slow, listOf(entry(0)), backgroundScope, now = { testScheduler.currentTime }).start()
+        runCurrent()
+        val a = renderer.calls.count { it == "GetTransportInfo" }
+        advanceTimeBy(10_000); runCurrent()
+        assertEquals(10, renderer.calls.count { it == "GetTransportInfo" } - a)
+    }
+
+    @Test
     fun `background end is detected between slow polls`() = runTest {
         val s = session(MediaKind.VIDEO, MediaKind.VIDEO)
         s.setForeground(false); runCurrent()

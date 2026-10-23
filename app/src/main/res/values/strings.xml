@@ -1,4 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DLNA TV Cast</string>
+    <string name="share_label">DLNA TV Cast</string>
+
+    <string name="home_hint">Share photos, videos or music from Gallery, Files or any other app and pick DLNA TV Cast to show them on the TV.</string>
+    <string name="home_network">Network</string>
+    <string name="home_address">Phone address: %1$s (%2$s)</string>
+    <string name="home_tv">TV</string>
+    <string name="home_no_tv">No TV used yet</string>
+    <string name="home_choose_tv">Choose TV</string>
+
+    <string name="preparing_items">Reading shared items…</string>
+    <string name="preparing_connecting">Connecting to %1$s…</string>
+
+    <string name="picker_title">Choose a TV</string>
+    <plurals name="picker_items">
+        <item quantity="one">%d item ready to cast</item>
+        <item quantity="other">%d items ready to cast</item>
+    </plurals>
+    <string name="picker_empty">No TV found. Check that the phone and the TV are on the same Wi-Fi network, then search again or add the TV manually.</string>
+    <string name="picker_search_again">Search again</string>
+    <string name="picker_add_manual">Add manually</string>
+    <string name="manual_title">Add TV by URL</string>
+    <string name="manual_hint">Device description URL, for example http://192.168.50.23:49494/description.xml</string>
+    <string name="manual_label">Description URL</string>
+    <string name="manual_add">Add</string>
+    <string name="manual_invalid">This URL does not describe a DLNA TV (MediaRenderer with AVTransport).</string>
+
+    <string name="remote_position_in_queue">%1$d of %2$d</string>
+    <string name="remote_volume">Volume %1$d</string>
+    <string name="remote_muted">Muted</string>
+
+    <string name="state_playing">Playing</string>
+    <string name="state_paused">Paused</string>
+    <string name="state_stopped">Stopped</string>
+    <string name="state_loading">Loading…</string>
+    <string name="state_lost">Connection to TV lost</string>
+
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_mute">Mute</string>
+    <string name="action_unmute">Unmute</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_end">End casting</string>
+
+    <string name="notification_channel">Casting</string>
+    <string name="notification_preparing">Preparing to cast…</string>
+    <string name="notification_choose_tv">Choose a TV to start casting</string>
+
+    <string name="error_title">Cannot cast</string>
+    <string name="error_wifi_required">A Wi-Fi connection to the TV\'s network is required.</string>
+    <string name="error_server">Could not start streaming: %1$s</string>
+    <plurals name="error_nothing_readable">
+        <item quantity="one">The shared item could not be opened.</item>
+        <item quantity="other">None of the %d shared items could be opened.</item>
+    </plurals>
+    <plurals name="notice_skipped">
+        <item quantity="one">%d item could not be opened and was skipped.</item>
+        <item quantity="other">%d items could not be opened and were skipped.</item>
+    </plurals>
 </resources>
