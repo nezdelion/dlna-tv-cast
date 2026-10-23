@@ -88,3 +88,7 @@ The emulator is behind NAT, so the renderer cannot reach it directly. Debug buil
 "advertised host override" on the home screen: set host `127.0.0.1:8099`, port `8099`, run
 `adb forward tcp:8099 tcp:8099`, and add the renderer manually as
 `http://10.0.2.2:<port>/description.xml`. The override does not exist in release builds.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
