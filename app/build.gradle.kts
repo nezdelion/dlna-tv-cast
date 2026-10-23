@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Release signing: keystore and passwords live outside the repository, in
+// ~/.gradle/gradle.properties (see README). Without them the release APK is unsigned.
+val releaseStoreFile: String? = providers.gradleProperty("DLNATVCAST_RELEASE_STORE_FILE").orNull
+
 android {
     namespace = "io.github.nezdelion.dlnatvcast"
     compileSdk = 36
@@ -13,6 +17,24 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+    }
+
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = providers.gradleProperty("DLNATVCAST_RELEASE_STORE_PASSWORD").get()
+                keyAlias = providers.gradleProperty("DLNATVCAST_RELEASE_KEY_ALIAS").get()
+                keyPassword = providers.gradleProperty("DLNATVCAST_RELEASE_KEY_PASSWORD").get()
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     buildFeatures {

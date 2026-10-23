@@ -41,5 +41,6 @@
 
 ## 6. Delivery and acceptance
 
-- [ ] 6.1 Release build signed with a local keystore outside the repo (path via `~/.gradle/gradle.properties`), README with install steps; verify `./gradlew :app:assembleRelease` produces a signed APK and `apksigner verify` passes
+- [x] 6.1 Release build signed with a local keystore outside the repo (path via `~/.gradle/gradle.properties`), README with install steps; verify `./gradlew :app:assembleRelease` produces a signed APK and `apksigner verify` passes
+  - Keystore `~/.android/dlna-tv-cast-release.jks` (PKCS12, RSA 3072, alias `dlnatvcast`), credentials in `~/.gradle/gradle.properties` (mode 600). `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk`; `apksigner verify` passes (v2 scheme, `CN=DLNA TV Cast, O=nezdelion`). The release APK installs and starts on the emulator, without the debug override section.
 - [ ] 6.2 Manual acceptance on the real phone against `tv-renderer`: share one video from Gallery (starts without waiting), share five photos and step through, seek, pause from PC keyboard reflected on phone, screen off during a long video, stop from notification, share PDF (app not listed); record results here
