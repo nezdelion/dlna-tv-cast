@@ -5,9 +5,9 @@
 
 ## 2. Core: HTTP streaming
 
-- [ ] 2.1 Implement `ByteSource` and the session-scoped HTTP server (GET/HEAD, keep-alive, token paths, 404 elsewhere, bind to a given address); verify with socket-level tests for 200/HEAD/404 responses
-- [ ] 2.2 Implement single-range handling (`a-b`, `a-`, `-n`, 416) and DLNA headers; verify tests covering each range form, 416, `Accept-Ranges`, `contentFeatures.dlna.org` on request
-- [ ] 2.3 Verify end-of-file-first access pattern: test that requests the last 1 MiB then byte 0 of a 20 MB source and checks bytes and statuses; verify server stop closes the port
+- [x] 2.1 Implement `ByteSource` and the session-scoped HTTP server (GET/HEAD, keep-alive, token paths, 404 elsewhere, bind to a given address); verify with socket-level tests for 200/HEAD/404 responses
+- [x] 2.2 Implement single-range handling (`a-b`, `a-`, `-n`, 416) and DLNA headers; verify tests covering each range form, 416, `Accept-Ranges`, `contentFeatures.dlna.org` on request
+- [x] 2.3 Verify end-of-file-first access pattern: test that requests the last 1 MiB then byte 0 of a 20 MB source and checks bytes and statuses; verify server stop closes the port
 
 ## 3. Core: UPnP
 
