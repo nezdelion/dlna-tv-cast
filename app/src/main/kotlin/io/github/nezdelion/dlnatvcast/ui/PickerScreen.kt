@@ -95,11 +95,6 @@ fun PickerScreen(itemCount: Int, notice: String?, onPicked: (RendererDevice) -> 
         }
     }
 
-    fun pick(device: RendererDevice) {
-        store.remember(device)
-        onPicked(device)
-    }
-
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.safeDrawingPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.picker_title), style = MaterialTheme.typography.headlineSmall)
@@ -113,7 +108,7 @@ fun PickerScreen(itemCount: Int, notice: String?, onPicked: (RendererDevice) -> 
             LazyColumn(Modifier.weight(1f, fill = true)) {
                 items(devices, key = { it.udn }) { device ->
                     Column(
-                        Modifier.fillMaxWidth().clickable { pick(device) }.padding(vertical = 12.dp).testTag("renderer_${device.friendlyName}"),
+                        Modifier.fillMaxWidth().clickable { onPicked(device) }.padding(vertical = 12.dp).testTag("renderer_${device.friendlyName}"),
                     ) {
                         Text(device.friendlyName, style = MaterialTheme.typography.titleMedium)
                         Text(device.location, style = MaterialTheme.typography.bodySmall)

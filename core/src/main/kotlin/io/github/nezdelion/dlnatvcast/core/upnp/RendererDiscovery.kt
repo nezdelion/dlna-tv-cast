@@ -26,6 +26,9 @@ class RendererDiscovery(
                     fetch(response.location)
                 } catch (_: IOException) {
                     return@launch
+                } catch (_: IllegalArgumentException) {
+                    // Malformed URL in a foreign SSDP reply.
+                    return@launch
                 }
                 val fresh = synchronized(seenUdn) { seenUdn.add(device.udn) }
                 if (fresh) send(device)

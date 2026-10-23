@@ -199,6 +199,31 @@ class MediaServerTest {
     }
 
     @Test
+    fun `source failing with a runtime exception only drops that connection`() {
+        val broken = object : ByteSource {
+            override val length = 100L
+            override val mime = "video/mp4"
+            override fun open(offset: Long): InputStream = throw SecurityException("grant revoked")
+        }
+        // On Android an exception escaping the server's coroutines kills the app process.
+        val uncaught = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { _, e -> uncaught += e }
+        try {
+            MediaServer(listOf(MediaItem("x.mp4", broken)), InetAddress.getLoopbackAddress()).start().use { s ->
+                val p = URI(s.urlFor(0)).rawPath
+                RawHttpClient(s.localPort).use { c -> assertThrows<Exception> { c.request("GET", p) } }
+                RawHttpClient(s.localPort).use { c -> assertEquals(200, c.request("HEAD", p).status) }
+            }
+            // The failing connection is torn down asynchronously; give it time to report.
+            repeat(20) { if (uncaught.isEmpty()) Thread.sleep(50) }
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+        }
+        assertTrue(uncaught.isEmpty(), uncaught.toString())
+    }
+
+    @Test
     fun `close stops listening and drops connections`() {
         val port = server.localPort
         val c = client()

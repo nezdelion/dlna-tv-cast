@@ -84,6 +84,8 @@ class MediaServer(
                     client.use { serve(it) }
                 } catch (_: IOException) {
                     // Client went away mid-transfer; renderers do this on every seek.
+                } catch (_: RuntimeException) {
+                    // The source failed (e.g. a revoked content grant); drop this connection only.
                 } finally {
                     connections -= client
                 }

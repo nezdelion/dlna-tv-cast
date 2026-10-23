@@ -48,8 +48,6 @@ object CastHub {
         _state.value = CastUiState(phase, notice)
     }
 
-    fun clearNotice() = _state.update { it.copy(notice = null) }
-
     /** UI dismisses a failure screen. */
     fun dismissFailure() = _state.update { if (it.phase is CastPhase.Failed) CastUiState() else it }
 }

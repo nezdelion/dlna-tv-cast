@@ -173,7 +173,7 @@ class CastService : Service(), CastHub.Controller {
         }
     }
 
-    fun discovery(lanInfo: LanInfo) =
+    private fun discovery(lanInfo: LanInfo) =
         RendererDiscovery(SsdpClient { UdpSsdpTransport(lanInfo.networkInterface) })
 
     override fun selectRenderer(device: RendererDevice) {

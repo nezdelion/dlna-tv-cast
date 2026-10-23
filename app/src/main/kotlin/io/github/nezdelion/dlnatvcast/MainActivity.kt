@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import io.github.nezdelion.dlnatvcast.cast.CastHub
 import io.github.nezdelion.dlnatvcast.cast.CastPhase
+import io.github.nezdelion.dlnatvcast.prefs.RendererStore
 import io.github.nezdelion.dlnatvcast.ui.AppTheme
 import io.github.nezdelion.dlnatvcast.ui.HomeScreen
 import io.github.nezdelion.dlnatvcast.ui.PickerScreen
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
                 val ui by CastHub.state.collectAsState()
                 // Picker opened from the home screen to choose a default TV without a share.
                 var standalonePicker by remember { mutableStateOf(false) }
+                val store = remember { RendererStore(this) }
                 when (val phase = ui.phase) {
                     is CastPhase.Casting -> RemoteScreen(phase, ui.notice)
                     is CastPhase.ChooseRenderer -> PickerScreen(
@@ -50,7 +52,15 @@ class MainActivity : ComponentActivity() {
                     is CastPhase.Preparing -> PreparingScreen(phase.message, onCancel = { CastHub.controller?.endSession() })
                     is CastPhase.Failed, CastPhase.Idle ->
                         if (standalonePicker) {
-                            PickerScreen(itemCount = 0, notice = null, onPicked = { standalonePicker = false }, onCancel = { standalonePicker = false })
+                            PickerScreen(
+                                itemCount = 0,
+                                notice = null,
+                                onPicked = {
+                                    store.remember(it)
+                                    standalonePicker = false
+                                },
+                                onCancel = { standalonePicker = false },
+                            )
                         } else {
                             HomeScreen(
                                 error = (phase as? CastPhase.Failed)?.message,
