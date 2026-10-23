@@ -31,7 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.nezdelion.dlnatvcast.R
 import io.github.nezdelion.dlnatvcast.cast.CastHub
-import io.github.nezdelion.dlnatvcast.cast.CastPhase
+import io.github.nezdelion.dlnatvcast.core.cast.CastPhase
 import io.github.nezdelion.dlnatvcast.cast.CastService
 import io.github.nezdelion.dlnatvcast.core.session.TransportState
 import io.github.nezdelion.dlnatvcast.core.upnp.UpnpTime

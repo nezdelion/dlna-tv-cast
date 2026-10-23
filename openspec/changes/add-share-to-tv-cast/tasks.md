@@ -55,3 +55,26 @@
     8. Two short videos shared together → second starts automatically after the first ends; press `q` in mpv during the first of two videos (far from the end) → phone shows Stopped and the second does not start. Result: ____
     9. Files → a PDF → Share → DLNA TV Cast is not in the list. Result: ____
     10. Optional: mobile data only (Wi-Fi off) → share a photo → "A Wi-Fi connection … is required".
+
+## Review fixes
+
+Codex review (REVIEW.md, not committed): 10 major, 5 minor. Each finding and what it became:
+
+- #1 Stop cleanup could destroy a newer share → lifecycle extracted into `core` `CastCoordinator` with generations; each operation detaches what it replaces. `CastCoordinatorTest` (delayed Stop + new share; replace without Stop).
+- #2 `CastSession.close()` not terminal → session-owned job; close marks closing, cancels/joins startup, polls and commands, then Stop; later commands ignored. `CastSessionReviewTest` (close during SetAVTransportURI, pending next, commands after close).
+- #3 blocking HTTP defeated deadlines → raw-socket HTTP client with total deadline, cancellation closes the socket; `onDestroy` no longer blocks (server closed synchronously, Stop in a bounded cleanup scope). `HardeningTest` (hung/trickling renderer, resolve budget), `CastCoordinatorTest` (destroy).
+- #4 volume reads stalled polling → separate volume loop. `CastSessionReviewTest` (5 s RenderingControl).
+- #5 renderer-lost too late → watchdog on time since last answer. `CastSessionReviewTest` (5 s timeouts, screen on/off).
+- #6 projection across outages → failed poll drops projection; unknown duration after a gap is not an end. `CastSessionReviewTest`.
+- #7 malformed URLBase escaped → URL validation, all description errors become `InvalidRendererException`; discovery skips any failing device. `HardeningTest`.
+- #8 no wake ownership → `WAKE_LOCK`, partial wake lock + Wi-Fi lock only while casting, released on every exit path. `CastCoordinatorTest` (keepAwake on each transition); emulator: locks held while casting, released after Stop/End.
+- #9 unbounded XML → 256 KiB body limit, depth/element limits, iterative traversal, 4 parallel description fetches. `HardeningTest`.
+- #10 idle connections starved I/O → own server threads, 10 s absolute header deadline, pending/active connection limits, token-less connections closed. `MediaServerAbuseTest`.
+- #11 DTD hardening ignored on Android → explicit parser-independent `Xml.checkStructure` refuses DOCTYPE/ENTITY. `HardeningTest` (valid renderer + DTD variants). The Android parser itself cannot run in JVM tests.
+- #12 locale digits → `Locale.ROOT`. `HardeningTest`, `MediaServerLocaleTest`.
+- #13 unknown length advertised seeking → `DLNA.ORG_OP=00`, no `Accept-Ranges` in HTTP and DIDL; media-streaming spec updated. `UnknownLengthCapabilityTest`.
+- #14 notification lacked position → `NotificationModel` (5 s steps, progress bar). `NotificationModelTest`; emulator: `TV · Playing · 0:00:10 / 0:00:30`.
+- #15 mixed share untested → `ShareIntake` + coordinator intake tests (order, skipped count, no renderer contact). Grant survival after `ShareActivity` finishes is only covered by emulator shares (no automated Android test). 6.2 stays open.
+
+Before the fix, the new tests for #2–#7, #9, #10, #12 (UPnP time) and #13 failed; #1, #8, #11, #14 and #15 test new seams that did not exist (verified by mutating each guard). After the fix: `./gradlew :core:test :app:assembleDebug :app:assembleRelease :app:lintDebug` passes (lint: 0 errors, the same 7 warnings and 1 hint as before the review). Emulator smoke: share → cast, Stop from the notification (renderer Stop, notification and service gone, port closed, wake/Wi-Fi locks released), new share while casting (no Stop, old token 404), End. The opt-in renderer test passed and left the renderer stopped.
+

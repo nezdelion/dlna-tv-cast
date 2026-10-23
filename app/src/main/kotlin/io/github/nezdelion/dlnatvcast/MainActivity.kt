@@ -15,7 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import io.github.nezdelion.dlnatvcast.cast.CastHub
-import io.github.nezdelion.dlnatvcast.cast.CastPhase
+import io.github.nezdelion.dlnatvcast.core.cast.CastFailure
+import io.github.nezdelion.dlnatvcast.core.cast.CastPhase
 import io.github.nezdelion.dlnatvcast.prefs.RendererStore
 import io.github.nezdelion.dlnatvcast.ui.AppTheme
 import io.github.nezdelion.dlnatvcast.ui.HomeScreen
@@ -38,18 +39,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 val ui by CastHub.state.collectAsState()
+                val notice = if (ui.skipped > 0) resources.getQuantityString(R.plurals.notice_skipped, ui.skipped, ui.skipped) else null
                 // Picker opened from the home screen to choose a default TV without a share.
                 var standalonePicker by remember { mutableStateOf(false) }
                 val store = remember { RendererStore(this) }
                 when (val phase = ui.phase) {
-                    is CastPhase.Casting -> RemoteScreen(phase, ui.notice)
+                    is CastPhase.Casting -> RemoteScreen(phase, notice)
                     is CastPhase.ChooseRenderer -> PickerScreen(
                         itemCount = phase.itemCount,
-                        notice = ui.notice,
+                        notice = notice,
                         onPicked = { CastHub.controller?.selectRenderer(it) },
                         onCancel = { CastHub.controller?.endSession() },
                     )
-                    is CastPhase.Preparing -> PreparingScreen(phase.message, onCancel = { CastHub.controller?.endSession() })
+                    CastPhase.ReadingItems -> PreparingScreen(getString(R.string.preparing_items), onCancel = { CastHub.controller?.endSession() })
+                    is CastPhase.Connecting -> PreparingScreen(
+                        getString(R.string.preparing_connecting, phase.rendererName),
+                        onCancel = { CastHub.controller?.endSession() },
+                    )
                     is CastPhase.Failed, CastPhase.Idle ->
                         if (standalonePicker) {
                             PickerScreen(
@@ -63,7 +69,7 @@ class MainActivity : ComponentActivity() {
                             )
                         } else {
                             HomeScreen(
-                                error = (phase as? CastPhase.Failed)?.message,
+                                error = (phase as? CastPhase.Failed)?.let { failureText(it.failure) },
                                 onDismissError = CastHub::dismissFailure,
                                 onChooseTv = { standalonePicker = true },
                             )
@@ -71,5 +77,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun failureText(failure: CastFailure): String = when (failure) {
+        CastFailure.NoNetwork -> getString(R.string.error_wifi_required)
+        is CastFailure.NothingReadable ->
+            resources.getQuantityString(R.plurals.error_nothing_readable, failure.shared, failure.shared)
+        is CastFailure.ServerFailed -> getString(R.string.error_server, failure.message)
     }
 }

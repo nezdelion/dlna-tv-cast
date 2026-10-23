@@ -9,6 +9,7 @@ import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import io.github.nezdelion.dlnatvcast.cast.CastService
+import io.github.nezdelion.dlnatvcast.core.cast.ShareIntake
 
 /**
  * Share-sheet entry point without UI: hands the shared URIs (with their read grants) to
@@ -28,10 +29,10 @@ class ShareActivity : Activity() {
             if (clip == null) emptyList() else (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
         }
         // Only URIs we were granted can be handed on; granting the others would throw.
-        val (readable, unreadable) = uris.partition {
+        val (readable, unreadable) = ShareIntake.splitReadable(uris) {
             checkCallingOrSelfUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) == PackageManager.PERMISSION_GRANTED
         }
-        ContextCompat.startForegroundService(this, CastService.shareIntent(this, readable, unreadable.size, intent.type))
+        ContextCompat.startForegroundService(this, CastService.shareIntent(this, readable, unreadable, intent.type))
         startActivity(
             Intent(this, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),

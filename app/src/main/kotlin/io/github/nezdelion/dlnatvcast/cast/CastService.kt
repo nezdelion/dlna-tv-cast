@@ -22,48 +22,50 @@ import io.github.nezdelion.dlnatvcast.DebugOverrides
 import io.github.nezdelion.dlnatvcast.MainActivity
 import io.github.nezdelion.dlnatvcast.R
 import io.github.nezdelion.dlnatvcast.core.MediaItem
+import io.github.nezdelion.dlnatvcast.core.cast.CastCoordinator
+import io.github.nezdelion.dlnatvcast.core.cast.CastPhase
+import io.github.nezdelion.dlnatvcast.core.cast.CastPlatform
+import io.github.nezdelion.dlnatvcast.core.cast.NotificationModel
 import io.github.nezdelion.dlnatvcast.core.http.MediaServer
 import io.github.nezdelion.dlnatvcast.core.session.CastSession
-import io.github.nezdelion.dlnatvcast.core.session.QueueEntry
-import io.github.nezdelion.dlnatvcast.core.session.SessionState
+import io.github.nezdelion.dlnatvcast.core.session.RendererClient
 import io.github.nezdelion.dlnatvcast.core.session.TransportState
 import io.github.nezdelion.dlnatvcast.core.upnp.RendererDevice
 import io.github.nezdelion.dlnatvcast.core.upnp.RendererDiscovery
 import io.github.nezdelion.dlnatvcast.core.upnp.SsdpClient
 import io.github.nezdelion.dlnatvcast.core.upnp.UdpSsdpTransport
 import io.github.nezdelion.dlnatvcast.core.upnp.UpnpRendererClient
+import io.github.nezdelion.dlnatvcast.core.upnp.UpnpTime
 import io.github.nezdelion.dlnatvcast.media.ContentUriByteSource
-import io.github.nezdelion.dlnatvcast.net.LanInfo
 import io.github.nezdelion.dlnatvcast.net.LocalNetwork
 import io.github.nezdelion.dlnatvcast.prefs.RendererStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.net.InetAddress
 
 /**
- * Foreground service (`mediaPlayback`) that owns the shared queue, the HTTP server and the
- * cast session. Lives from a share until the user ends the session.
+ * Foreground service (`mediaPlayback`) hosting a [CastCoordinator]: it owns the shared queue,
+ * the HTTP server and the cast session from a share until the user ends casting.
  */
-class CastService : Service(), CastHub.Controller {
+class CastService : Service(), CastHub.Controller, CastPlatform<Uri> {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var network: LocalNetwork
     private lateinit var store: RendererStore
+    private lateinit var awake: AwakeLocks
+    private lateinit var coordinator: CastCoordinator<Uri>
+    private var shareType: String? = null
 
-    private var items: List<MediaItem> = emptyList()
-    private var lan: LanInfo? = null
-    private var server: MediaServer? = null
-    private var session: CastSession? = null
-    private var sessionScope: CoroutineScope? = null
-    private var prepareJob: Job? = null
+    private val session: CastSession?
+        get() = (coordinator.state.value.phase as? CastPhase.Casting)?.session
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -75,6 +77,9 @@ class CastService : Service(), CastHub.Controller {
         super.onCreate()
         network = LocalNetwork(this)
         store = RendererStore(this)
+        awake = AwakeLocks(this)
+        // The cleanup scope outlives this service so a best-effort Stop can still go out.
+        coordinator = CastCoordinator(scope, this, cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO))
         createChannel()
         CastHub.controller = this
         ContextCompat.registerReceiver(
@@ -85,6 +90,7 @@ class CastService : Service(), CastHub.Controller {
             },
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        observe()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -93,12 +99,13 @@ class CastService : Service(), CastHub.Controller {
         when (intent?.action) {
             ACTION_SHARE -> {
                 goForeground(notification(getString(R.string.notification_preparing), null))
-                handleShare(intent)
+                shareType = intent.type
+                coordinator.share(sharedUris(intent), intent.getIntExtra(EXTRA_UNREADABLE, 0))
             }
             ACTION_TOGGLE -> session?.let { s -> scope.launch { s.togglePlayPause() } }
             ACTION_NEXT -> session?.let { s -> scope.launch { s.next() } }
             ACTION_STOP -> endSession()
-            else -> if (session == null && prepareJob == null) stopSelf()
+            else -> if (coordinator.state.value.phase == CastPhase.Idle) stopSelf()
         }
         return START_NOT_STICKY
     }
@@ -106,149 +113,92 @@ class CastService : Service(), CastHub.Controller {
     override fun onDestroy() {
         unregisterReceiver(screenReceiver)
         if (CastHub.controller === this) CastHub.controller = null
-        val s = session
-        // Best effort: the renderer should not keep playing a URL that is about to disappear.
-        if (s != null) runBlocking { withTimeoutOrNull(1_500) { s.close(stopRenderer = true) } }
-        teardown()
+        // Never blocks: closes the local server now, Stop goes out in the background.
+        coordinator.destroy()
+        CastHub.publish(coordinator.state.value)
         scope.cancel()
-        if (CastHub.state.value.phase !is CastPhase.Failed) CastHub.setPhase(CastPhase.Idle, null)
         super.onDestroy()
     }
 
-    private fun handleShare(intent: Intent) {
-        val uris = sharedUris(intent)
-        val unreadable = intent.getIntExtra(EXTRA_UNREADABLE, 0)
-        val typeHint = intent.type
-        prepareJob?.cancel()
-        prepareJob = scope.launch {
-            // A new share replaces the previous queue; the renderer simply gets the new item.
-            session?.close(stopRenderer = false)
-            teardown()
-            val lanInfo = network.currentLan()
-            if (lanInfo == null) {
-                fail(getString(R.string.error_wifi_required))
-                return@launch
-            }
-            lan = lanInfo
-            CastHub.setPhase(CastPhase.Preparing(getString(R.string.preparing_items)), null)
-            val readable = withContext(Dispatchers.IO) {
-                uris.mapNotNull { ContentUriByteSource.inspect(contentResolver, it, typeHint) }
-            }
-            val shared = uris.size + unreadable
-            val skipped = shared - readable.size
-            if (readable.isEmpty()) {
-                fail(resources.getQuantityString(R.plurals.error_nothing_readable, shared, shared))
-                return@launch
-            }
-            items = readable
-            val notice = if (skipped > 0) resources.getQuantityString(R.plurals.notice_skipped, skipped, skipped) else null
-            val server = try {
-                startServer(lanInfo, readable)
-            } catch (e: Exception) {
-                fail(getString(R.string.error_server, e.message ?: e.javaClass.simpleName))
-                return@launch
-            }
-            this@CastService.server = server
-
-            val remembered = store.last
-            if (remembered != null) {
-                CastHub.setPhase(CastPhase.Preparing(getString(R.string.preparing_connecting, remembered.name)), notice)
-                val device = network.withMulticastLock { discovery(lanInfo).resolve(remembered.udn, remembered.location) }
-                if (device != null) {
-                    startSession(device, notice)
-                    return@launch
-                }
-            }
-            CastHub.setPhase(CastPhase.ChooseRenderer(readable.size), notice)
-            updateNotification(notification(getString(R.string.notification_choose_tv), null))
-        }
-    }
-
-    private fun startServer(lanInfo: LanInfo, readable: List<MediaItem>): MediaServer {
-        val override = DebugOverrides.serverOverride(this)
-        return if (override != null) {
-            MediaServer(readable, InetAddress.getByName("0.0.0.0"), override.port, override.advertisedAuthority).start()
-        } else {
-            MediaServer(readable, lanInfo.address).start()
-        }
-    }
-
-    private fun discovery(lanInfo: LanInfo) =
-        RendererDiscovery(SsdpClient { UdpSsdpTransport(lanInfo.networkInterface) })
-
-    override fun selectRenderer(device: RendererDevice) {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observe() {
+        scope.launch { coordinator.state.collect { CastHub.publish(it) } }
         scope.launch {
-            if (server == null || items.isEmpty()) return@launch
-            session?.close(stopRenderer = false)
-            startSession(device, CastHub.state.value.notice)
+            coordinator.state
+                .map { it.phase }
+                .distinctUntilChanged()
+                .flatMapLatest { phase ->
+                    when (phase) {
+                        is CastPhase.Casting -> {
+                            phase.session.setForeground(getSystemService(PowerManager::class.java).isInteractive)
+                            phase.session.state.map { NotificationModel.from(it) }.distinctUntilChanged()
+                        }
+                        is CastPhase.ChooseRenderer -> {
+                            updateNotification(notification(getString(R.string.notification_choose_tv), null))
+                            emptyFlow()
+                        }
+                        else -> emptyFlow()
+                    }
+                }
+                .collect { model ->
+                    Log.i(TAG, "item ${model.index + 1}/${model.count} ${model.transport}${if (model.rendererLost) " (renderer lost)" else ""}")
+                    updateNotification(notification(model.title, model))
+                }
         }
     }
 
-    private fun startSession(device: RendererDevice, notice: String?) {
-        val server = server ?: return
-        store.remember(device)
-        sessionScope?.cancel()
-        val sScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-        sessionScope = sScope
-        val queue = items.mapIndexed { i, item ->
-            QueueEntry(item.title, server.urlFor(i), item.mime, item.kind, item.source.length)
-        }
-        val s = CastSession(UpnpRendererClient(device), queue, sScope)
-        session = s
-        prepareJob = null
-        s.setForeground(getSystemService(PowerManager::class.java).isInteractive)
-        s.start()
-        CastHub.setPhase(CastPhase.Casting(s, device), notice)
-        sScope.launch {
-            s.state
-                .map { NotificationKey(it.current.title, it.transport, it.hasNext, it.rendererLost, it.index, it.queue.size) }
-                .distinctUntilChanged()
-                .collect {
-                    Log.i(TAG, "item ${it.index + 1}/${it.size} ${it.transport}${if (it.lost) " (renderer lost)" else ""}")
-                    updateNotification(notification(it.title, s.state.value))
-                }
-        }
+    // CastHub.Controller
+
+    override fun selectRenderer(device: RendererDevice) = coordinator.select(device)
+
+    override fun endSession() {
+        coordinator.end()
+        // The notification goes now; the service stops once the renderer has had its Stop.
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
     }
 
     override fun retry() {
         session?.retry()
     }
 
-    override fun endSession() {
-        scope.launch {
-            prepareJob?.cancel()
-            prepareJob = null
-            session?.close(stopRenderer = true)
-            teardown()
-            CastHub.setPhase(CastPhase.Idle, null)
-            ServiceCompat.stopForeground(this@CastService, ServiceCompat.STOP_FOREGROUND_REMOVE)
-            stopSelf()
+    // CastPlatform
+
+    override fun lanAddress(): InetAddress? = network.currentLan()?.address
+
+    override suspend fun inspect(item: Uri): MediaItem? = withContext(Dispatchers.IO) {
+        ContentUriByteSource.inspect(contentResolver, item, shareType)
+    }
+
+    override fun startServer(items: List<MediaItem>, lan: InetAddress): MediaServer {
+        val override = DebugOverrides.serverOverride(this)
+        return if (override != null) {
+            MediaServer(items, InetAddress.getByName("0.0.0.0"), override.port, override.advertisedAuthority).start()
+        } else {
+            MediaServer(items, lan).start()
         }
     }
 
-    private fun fail(message: String) {
-        teardown()
-        CastHub.setPhase(CastPhase.Failed(message), null)
+    override fun rememberedName(): String? = store.last?.name
+
+    override suspend fun resolveRemembered(lan: InetAddress): RendererDevice? {
+        val remembered = store.last ?: return null
+        val lanInfo = network.currentLan() ?: return null
+        return network.withMulticastLock {
+            RendererDiscovery(SsdpClient { UdpSsdpTransport(lanInfo.networkInterface) })
+                .resolve(remembered.udn, remembered.location)
+        }
+    }
+
+    override fun remember(device: RendererDevice) = store.remember(device)
+
+    override fun client(device: RendererDevice): RendererClient = UpnpRendererClient(device)
+
+    override fun keepAwake(on: Boolean) = awake.hold(on)
+
+    override fun finished() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
-
-    private fun teardown() {
-        sessionScope?.cancel()
-        sessionScope = null
-        session = null
-        server?.close()
-        server = null
-    }
-
-    private data class NotificationKey(
-        val title: String,
-        val transport: TransportState,
-        val hasNext: Boolean,
-        val lost: Boolean,
-        val index: Int,
-        val size: Int,
-    )
 
     // Notification
 
@@ -271,7 +221,7 @@ class CastService : Service(), CastHub.Controller {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun notification(title: String, state: SessionState?): Notification {
+    private fun notification(title: String, model: NotificationModel?): Notification {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE,
@@ -287,23 +237,25 @@ class CastService : Service(), CastHub.Controller {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         val compact = mutableListOf<Int>()
         var actions = 0
-        if (state != null) {
-            val text = when {
-                state.rendererLost -> getString(R.string.state_lost)
-                else -> getString(stateLabel(state.transport))
+        if (model != null) {
+            val stateText = if (model.rendererLost) getString(R.string.state_lost) else getString(stateLabel(model.transport))
+            val parts = mutableListOf(model.rendererName)
+            if (model.count > 1) parts += "${model.index + 1}/${model.count}"
+            parts += stateText
+            val position = model.positionSec
+            val duration = model.durationSec
+            if (position != null && duration != null) {
+                parts += getString(R.string.notification_position, UpnpTime.format(position), UpnpTime.format(duration))
+                builder.setProgress(duration.toInt(), position.toInt().coerceAtMost(duration.toInt()), false)
             }
-            builder.setContentText(
-                if (state.queue.size > 1) "${state.rendererName} · ${state.index + 1}/${state.queue.size} · $text"
-                else "${state.rendererName} · $text",
-            )
-            val playing = state.transport == TransportState.PLAYING
+            builder.setContentText(parts.joinToString(" · "))
             builder.addAction(
-                if (playing) R.drawable.ic_pause else R.drawable.ic_play,
-                getString(if (playing) R.string.action_pause else R.string.action_play),
+                if (model.playing) R.drawable.ic_pause else R.drawable.ic_play,
+                getString(if (model.playing) R.string.action_pause else R.string.action_play),
                 serviceIntent(ACTION_TOGGLE, 1),
             )
             compact += actions++
-            if (state.hasNext) {
+            if (model.hasNext) {
                 builder.addAction(R.drawable.ic_next, getString(R.string.action_next), serviceIntent(ACTION_NEXT, 2))
                 compact += actions++
             }

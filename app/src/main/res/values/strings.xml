@@ -49,6 +49,7 @@
 
     <string name="notification_channel">Casting</string>
     <string name="notification_preparing">Preparing to cast…</string>
+    <string name="notification_position">%1$s / %2$s</string>
     <string name="notification_choose_tv">Choose a TV to start casting</string>
 
     <string name="error_title">Cannot cast</string>
