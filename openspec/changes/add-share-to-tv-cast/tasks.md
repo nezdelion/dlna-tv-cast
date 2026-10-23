@@ -20,7 +20,8 @@
 
 - [x] 4.1 `CastSession` queue + commands (play item, pause/resume, stop, seek, next/prev, volume) over a renderer client interface; verify with a fake renderer
 - [x] 4.2 Poll loop with foreground/background intervals, state flow, renderer-lost after 15 s, auto-advance rule from design §5; verify state-machine tests for natural end vs user stop vs image items vs lost renderer
-- [ ] 4.3 Opt-in integration test against the real `tv-renderer` (`-PwithRenderer=...`): generated test video served from the PC, full play/seek/pause/stop cycle, and two-item auto-advance; verify it passes against `http://192.168.50.23:49494/description.xml` and leaves the renderer stopped
+- [x] 4.3 Opt-in integration test against the real `tv-renderer` (`-PwithRenderer=...`): generated test video served from the PC, full play/seek/pause/stop cycle, and two-item auto-advance; verify it passes against `http://192.168.50.23:49494/description.xml` and leaves the renderer stopped
+  - Run: `./gradlew :core:test --tests '*RealRendererTest*' -PwithRenderer=http://192.168.50.23:49494/description.xml` (needs `ffmpeg` with libx264). Passed twice in a row (~15 s each), renderer left `STOPPED`. One earlier run failed: right after `Play` the renderer reported `PAUSED_PLAYBACK` on its own (journal shows no `Pause` action), likely a leftover mpv pause state; not reproduced afterwards.
 
 ## 5. Android shell
 
