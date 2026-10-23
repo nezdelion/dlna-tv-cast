@@ -25,6 +25,7 @@ import io.github.nezdelion.dlnatvcast.core.MediaItem
 import io.github.nezdelion.dlnatvcast.core.cast.CastCoordinator
 import io.github.nezdelion.dlnatvcast.core.cast.CastPhase
 import io.github.nezdelion.dlnatvcast.core.cast.CastPlatform
+import io.github.nezdelion.dlnatvcast.core.cast.ClockText
 import io.github.nezdelion.dlnatvcast.core.cast.NotificationModel
 import io.github.nezdelion.dlnatvcast.core.http.MediaServer
 import io.github.nezdelion.dlnatvcast.core.session.CastSession
@@ -35,7 +36,6 @@ import io.github.nezdelion.dlnatvcast.core.upnp.RendererDiscovery
 import io.github.nezdelion.dlnatvcast.core.upnp.SsdpClient
 import io.github.nezdelion.dlnatvcast.core.upnp.UdpSsdpTransport
 import io.github.nezdelion.dlnatvcast.core.upnp.UpnpRendererClient
-import io.github.nezdelion.dlnatvcast.core.upnp.UpnpTime
 import io.github.nezdelion.dlnatvcast.media.ContentUriByteSource
 import io.github.nezdelion.dlnatvcast.net.LocalNetwork
 import io.github.nezdelion.dlnatvcast.prefs.RendererStore
@@ -239,16 +239,18 @@ class CastService : Service(), CastHub.Controller, CastPlatform<Uri> {
         var actions = 0
         if (model != null) {
             val stateText = if (model.rendererLost) getString(R.string.state_lost) else getString(stateLabel(model.transport))
-            val parts = mutableListOf(model.rendererName)
-            if (model.count > 1) parts += "${model.index + 1}/${model.count}"
-            parts += stateText
+            // Collapsed media notifications show one short line: time first, so it is not cut off;
+            // renderer and queue position go to the header.
+            val parts = mutableListOf<String>()
             val position = model.positionSec
             val duration = model.durationSec
             if (position != null && duration != null) {
-                parts += getString(R.string.notification_position, UpnpTime.format(position), UpnpTime.format(duration))
+                parts += getString(R.string.notification_position, ClockText.format(position, duration), ClockText.format(duration))
                 builder.setProgress(duration.toInt(), position.toInt().coerceAtMost(duration.toInt()), false)
             }
+            parts += stateText
             builder.setContentText(parts.joinToString(" · "))
+            builder.setSubText(if (model.count > 1) "${model.rendererName} · ${model.index + 1}/${model.count}" else model.rendererName)
             builder.addAction(
                 if (model.playing) R.drawable.ic_pause else R.drawable.ic_play,
                 getString(if (model.playing) R.string.action_pause else R.string.action_play),
