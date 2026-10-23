@@ -64,6 +64,11 @@ Then:
 
 Without these properties the release APK is built unsigned.
 
+## Continuous integration
+
+- `.github/workflows/ci.yml` runs on every push to `main` and on pull requests: core tests, debug build and lint. The debug APK and reports are attached to the run as artifacts.
+- `.github/workflows/release.yml` runs on tags `v*`: builds the signed release APK and attaches it to the GitHub release. It needs four repository secrets: `RELEASE_KEYSTORE_BASE64` (`base64 -w0 your.jks`), `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`. Bump `versionCode`/`versionName` in `app/build.gradle.kts`, then `git tag v0.2.0 && git push origin v0.2.0`.
+
 ## Install
 
 Enable USB debugging on the phone, connect it and run:
