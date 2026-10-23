@@ -18,8 +18,8 @@
 
 ## 4. Core: session
 
-- [ ] 4.1 `CastSession` queue + commands (play item, pause/resume, stop, seek, next/prev, volume) over a renderer client interface; verify with a fake renderer
-- [ ] 4.2 Poll loop with foreground/background intervals, state flow, renderer-lost after 15 s, auto-advance rule from design §5; verify state-machine tests for natural end vs user stop vs image items vs lost renderer
+- [x] 4.1 `CastSession` queue + commands (play item, pause/resume, stop, seek, next/prev, volume) over a renderer client interface; verify with a fake renderer
+- [x] 4.2 Poll loop with foreground/background intervals, state flow, renderer-lost after 15 s, auto-advance rule from design §5; verify state-machine tests for natural end vs user stop vs image items vs lost renderer
 - [ ] 4.3 Opt-in integration test against the real `tv-renderer` (`-PwithRenderer=...`): generated test video served from the PC, full play/seek/pause/stop cycle, and two-item auto-advance; verify it passes against `http://192.168.50.23:49494/description.xml` and leaves the renderer stopped
 
 ## 5. Android shell
