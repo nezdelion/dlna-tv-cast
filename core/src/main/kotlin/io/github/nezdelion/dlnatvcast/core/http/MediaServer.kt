@@ -19,7 +19,9 @@ import java.net.Socket
 import java.net.SocketException
 import java.security.SecureRandom
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Session-scoped HTTP/1.1 server that exposes [items] under `/<token>/<index>/<name>`.
@@ -57,6 +59,7 @@ class MediaServer(
     private val pending = LinkedHashSet<Socket>()
     private val active = HashSet<Socket>()
     private var serverSocket: ServerSocket? = null
+    private val acceptLoopDone = CountDownLatch(1)
 
     val localPort: Int get() = serverSocket?.localPort ?: error("Server not started")
 
@@ -66,7 +69,13 @@ class MediaServer(
         socket.reuseAddress = true
         socket.bind(InetSocketAddress(bindAddress, port))
         serverSocket = socket
-        scope.launch { acceptLoop(socket) }
+        scope.launch {
+            try {
+                acceptLoop(socket)
+            } finally {
+                acceptLoopDone.countDown()
+            }
+        }
         return this
     }
 
@@ -80,6 +89,10 @@ class MediaServer(
             serverSocket?.close()
         } catch (_: IOException) {
         }
+        // A thread blocked in accept() keeps the port listening (and may still accept) until it
+        // wakes up; wait for the loop so the port is really closed and every accepted socket is
+        // in `pending` for the sweep below. The wake-up is a signal, so this is not a real wait.
+        if (serverSocket != null) acceptLoopDone.await(ACCEPT_LOOP_EXIT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
         synchronized(lock) {
             (pending + active).forEach { runCatching { it.close() } }
             pending.clear()
@@ -348,6 +361,7 @@ class MediaServer(
         private const val MAX_LINE = 8 * 1024
         private const val MAX_HEADERS = 100
         private const val SERVER_HEADER = "Android UPnP/1.0 dlna-tv-cast/1.0"
+        private const val ACCEPT_LOOP_EXIT_TIMEOUT_MS = 1_000L
 
         private fun randomToken(): String {
             val bytes = ByteArray(16)

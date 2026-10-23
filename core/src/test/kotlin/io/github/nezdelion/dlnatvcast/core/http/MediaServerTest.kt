@@ -238,6 +238,18 @@ class MediaServerTest {
         c.close()
     }
 
+    @Test
+    fun `close does not return while the accept loop still holds the port`() {
+        // ServerSocket.close() returns before a thread blocked in accept() lets go of the listening
+        // socket, so without waiting for the loop a connect right after close() is still accepted.
+        repeat(100) {
+            val s = MediaServer(emptyList(), InetAddress.getLoopbackAddress()).start()
+            Thread.sleep(2) // let the accept loop block in accept()
+            s.close()
+            assertThrows<ConnectException> { Socket(InetAddress.getLoopbackAddress(), s.localPort).close() }
+        }
+    }
+
     private class UnknownLengthSource(override val mime: String, private val bytes: ByteArray) : ByteSource {
         override val length: Long? = null
         override fun open(offset: Long): InputStream = bytes.inputStream().also { it.skip(offset) }
