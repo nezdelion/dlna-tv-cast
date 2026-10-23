@@ -27,7 +27,7 @@ A small coroutine-based server in `core`: `ServerSocket` bound to the Wi-Fi IPv4
 Alternative: NanoHTTPD or Ktor server — NanoHTTPD is unmaintained and its range handling is DIY anyway; Ktor adds several MB and Netty/CIO complexity for ~300 lines of needed behaviour.
 
 ### 4. SSDP and SOAP by hand
-SSDP: `MulticastSocket` M-SEARCH for `urn:schemas-upnp-org:device:MediaRenderer:1` (MX=2, sent 3 times), collect unicast `LOCATION` responses, fetch and parse the device description (`XmlPullParser`-compatible parsing in core via `javax.xml` on JVM / `org.xmlpull` on Android hidden behind a small interface, or a tiny hand-written tolerant parser). Android needs a `WifiManager.MulticastLock` while searching.
+SSDP: `MulticastSocket` M-SEARCH for `urn:schemas-upnp-org:device:MediaRenderer:1` (MX=2, sent 3 times), collect unicast `LOCATION` responses, fetch and parse the device description with the namespace-aware `javax.xml.parsers` DOM parser, which exists both on the JVM and on Android, so `core` needs no parser interface (DOCTYPE/external entities disabled). The datagram I/O sits behind an `SsdpTransport` interface so discovery can be tested without multicast. Android needs a `WifiManager.MulticastLock` while searching.
 SOAP: `HttpURLConnection` POST with `SOAPACTION` header and envelope, response parsed for `out` arguments or `UPnPError`. Actions used: `SetAVTransportURI`, `Play`, `Pause`, `Stop`, `Seek`, `GetTransportInfo`, `GetPositionInfo`, `GetVolume`, `SetVolume`, `GetMute`, `SetMute`.
 Alternative: Cling/jUPnP — heavy, Cling is abandoned, jUPnP pulls Jetty/OSGi-era dependencies.
 

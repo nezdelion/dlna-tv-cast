@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+CACHE-CONTROL: max-age=1800
+DATE: Fri, 23 Oct 2026 10:42:30 GMT
+EXT:
+LOCATION: http://192.168.50.23:49494/description.xml
+SERVER: Linux UPnP/1.0 tv-renderer/1.0
+ST: urn:schemas-upnp-org:device:MediaRenderer:1
+USN: uuid:6f1c2a3b-4d5e-5f60-8a7b-9c0d1e2f3a4b::urn:schemas-upnp-org:device:MediaRenderer:1
+

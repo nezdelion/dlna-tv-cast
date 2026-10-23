@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0" xmlns:sec="http://www.sec.co.kr/dlna">
+  <specVersion><major>1</major><minor>0</minor></specVersion>
+  <URLBase>http://192.168.1.50:7676/</URLBase>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>
+    <friendlyName>Living room hub</friendlyName>
+    <UDN>uuid:root-0000</UDN>
+    <deviceList>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+        <friendlyName>[TV] Living Room &amp; Kitchen</friendlyName>
+        <manufacturer>Vendor</manufacturer>
+        <UDN>uuid:renderer-1234</UDN>
+        <serviceList>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:RenderingControl</serviceId>
+            <SCPDURL>smp_14_</SCPDURL>
+            <controlURL>smp_15_</controlURL>
+            <eventSubURL>smp_16_</eventSubURL>
+          </service>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
+            <SCPDURL>smp_20_</SCPDURL>
+            <controlURL>smp_21_</controlURL>
+            <eventSubURL>smp_22_</eventSubURL>
+          </service>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:AVTransport</serviceId>
+            <SCPDURL>smp_17_</SCPDURL>
+            <controlURL>/upnp/control/AVTransport1</controlURL>
+            <eventSubURL>smp_19_</eventSubURL>
+          </service>
+        </serviceList>
+      </device>
+    </deviceList>
+  </device>
+</root>

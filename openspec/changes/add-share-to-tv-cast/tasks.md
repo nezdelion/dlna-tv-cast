@@ -11,10 +11,10 @@
 
 ## 3. Core: UPnP
 
-- [ ] 3.1 SSDP M-SEARCH client and response parser (behind a socket abstraction); verify parser tests with captured `tv-renderer` responses and a fake responder
-- [ ] 3.2 Device description fetch/parse (friendly name, UDN, AVTransport/RenderingControl control URLs, relative URL resolution); verify tests against `tv-renderer`'s description XML and a vendor-style sample with URLBase
-- [ ] 3.3 SOAP client for the actions in design §4 with fault parsing; verify tests for envelope, argument escaping, out-arg parsing and `UPnPError` mapping
-- [ ] 3.4 DIDL-Lite builder (object class by MIME, title, `res` with protocolInfo/size, XML escaping); verify tests including titles with `&<>"`
+- [x] 3.1 SSDP M-SEARCH client and response parser (behind a socket abstraction); verify parser tests with captured `tv-renderer` responses and a fake responder
+- [x] 3.2 Device description fetch/parse (friendly name, UDN, AVTransport/RenderingControl control URLs, relative URL resolution); verify tests against `tv-renderer`'s description XML and a vendor-style sample with URLBase
+- [x] 3.3 SOAP client for the actions in design §4 with fault parsing; verify tests for envelope, argument escaping, out-arg parsing and `UPnPError` mapping
+- [x] 3.4 DIDL-Lite builder (object class by MIME, title, `res` with protocolInfo/size, XML escaping); verify tests including titles with `&<>"`
 
 ## 4. Core: session
 
