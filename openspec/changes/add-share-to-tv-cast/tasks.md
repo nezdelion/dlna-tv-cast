@@ -44,3 +44,14 @@
 - [x] 6.1 Release build signed with a local keystore outside the repo (path via `~/.gradle/gradle.properties`), README with install steps; verify `./gradlew :app:assembleRelease` produces a signed APK and `apksigner verify` passes
   - Keystore `~/.android/dlna-tv-cast-release.jks` (PKCS12, RSA 3072, alias `dlnatvcast`), credentials in `~/.gradle/gradle.properties` (mode 600). `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk`; `apksigner verify` passes (v2 scheme, `CN=DLNA TV Cast, O=nezdelion`). The release APK installs and starts on the emulator, without the debug override section.
 - [ ] 6.2 Manual acceptance on the real phone against `tv-renderer`: share one video from Gallery (starts without waiting), share five photos and step through, seek, pause from PC keyboard reflected on phone, screen off during a long video, stop from notification, share PDF (app not listed); record results here
+  - Not done yet: needs the real phone (no installs on it from this session). Steps:
+    1. Phone on the same Wi-Fi as the PC; `tv-renderer` running. `adb install -r app/build/outputs/apk/release/app-release.apk`. Open the app once, allow notifications; the home screen should show the phone's Wi-Fi address.
+    2. Gallery → one long video (several minutes, ideally MP4 recorded by the phone) → Share → DLNA TV Cast. First time: picker lists "TV" within ~5 s → tap it. Expect playback on the TV within a few seconds (no full-file wait) and the remote screen on the phone. Result: ____
+    3. Drag the seek bar to ~1:30 → TV jumps there. Result: ____
+    4. Press Space in the mpv window on the PC → phone shows "Paused" within 2 s; Space again → "Playing". Result: ____
+    5. Turn the phone screen off for ≥1 min during the video → TV keeps playing; turn on → state/position current. Result: ____
+    6. Pull down the notification → Stop → TV stops, notification disappears. Result: ____
+    7. Gallery → select five photos → Share → DLNA TV Cast → first photo on TV without the picker (remembered TV); Next/Previous step through all five; photos do not advance on their own. Result: ____
+    8. Two short videos shared together → second starts automatically after the first ends; press `q` in mpv during the first of two videos (far from the end) → phone shows Stopped and the second does not start. Result: ____
+    9. Files → a PDF → Share → DLNA TV Cast is not in the list. Result: ____
+    10. Optional: mobile data only (Wi-Fi off) → share a photo → "A Wi-Fi connection … is required".
