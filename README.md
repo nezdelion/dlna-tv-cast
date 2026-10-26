@@ -55,6 +55,10 @@ DLNATVCAST_RELEASE_KEY_ALIAS=dlnatvcast
 DLNATVCAST_RELEASE_KEY_PASSWORD=...
 ```
 
+The passwords can instead come from the environment, e.g. from a keyring, so they are not stored in a file:
+`ORG_GRADLE_PROJECT_DLNATVCAST_RELEASE_STORE_PASSWORD` and `ORG_GRADLE_PROJECT_DLNATVCAST_RELEASE_KEY_PASSWORD`.
+Without a store password the release APK is built unsigned.
+
 Then:
 
 ```sh
