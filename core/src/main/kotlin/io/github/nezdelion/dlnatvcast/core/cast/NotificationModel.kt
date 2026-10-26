@@ -16,6 +16,7 @@ data class NotificationModel(
     val count: Int,
     val transport: TransportState,
     val rendererLost: Boolean,
+    val hasPrevious: Boolean,
     val hasNext: Boolean,
     /** Null for images or when the duration is unknown. */
     val positionSec: Long?,
@@ -35,6 +36,7 @@ data class NotificationModel(
                 count = state.queue.size,
                 transport = state.transport,
                 rendererLost = state.rendererLost,
+                hasPrevious = state.hasPrevious,
                 hasNext = state.hasNext,
                 positionSec = if (timed) (state.positionSec ?: 0) / POSITION_STEP_SEC * POSITION_STEP_SEC else null,
                 durationSec = if (timed) state.durationSec else null,

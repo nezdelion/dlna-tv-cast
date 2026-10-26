@@ -103,6 +103,7 @@ class CastService : Service(), CastHub.Controller, CastPlatform<Uri> {
                 coordinator.share(sharedUris(intent), intent.getIntExtra(EXTRA_UNREADABLE, 0))
             }
             ACTION_TOGGLE -> session?.let { s -> scope.launch { s.togglePlayPause() } }
+            ACTION_PREVIOUS -> session?.let { s -> scope.launch { s.previous() } }
             ACTION_NEXT -> session?.let { s -> scope.launch { s.next() } }
             ACTION_STOP -> endSession()
             else -> if (coordinator.state.value.phase == CastPhase.Idle) stopSelf()
@@ -251,6 +252,12 @@ class CastService : Service(), CastHub.Controller, CastPlatform<Uri> {
             parts += stateText
             builder.setContentText(parts.joinToString(" · "))
             builder.setSubText(if (model.count > 1) "${model.rendererName} · ${model.index + 1}/${model.count}" else model.rendererName)
+            // Collapsed view fits three actions: play/pause and stop always, then next, else previous.
+            if (model.hasPrevious) {
+                builder.addAction(R.drawable.ic_previous, getString(R.string.action_previous), serviceIntent(ACTION_PREVIOUS, 4))
+                if (!model.hasNext) compact += actions
+                actions++
+            }
             builder.addAction(
                 if (model.playing) R.drawable.ic_pause else R.drawable.ic_play,
                 getString(if (model.playing) R.string.action_pause else R.string.action_play),
@@ -265,7 +272,7 @@ class CastService : Service(), CastHub.Controller, CastPlatform<Uri> {
         builder.addAction(R.drawable.ic_stop, getString(R.string.action_stop), serviceIntent(ACTION_STOP, 3))
         compact += actions
         builder.setStyle(
-            androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(*compact.take(3).toIntArray()),
+            androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(*compact.toIntArray()),
         )
         return builder.build()
     }
@@ -273,6 +280,7 @@ class CastService : Service(), CastHub.Controller, CastPlatform<Uri> {
     companion object {
         const val ACTION_SHARE = "io.github.nezdelion.dlnatvcast.action.SHARE"
         const val ACTION_TOGGLE = "io.github.nezdelion.dlnatvcast.action.TOGGLE"
+        const val ACTION_PREVIOUS = "io.github.nezdelion.dlnatvcast.action.PREVIOUS"
         const val ACTION_NEXT = "io.github.nezdelion.dlnatvcast.action.NEXT"
         const val ACTION_STOP = "io.github.nezdelion.dlnatvcast.action.STOP"
         private const val TAG = "DlnaTvCast"

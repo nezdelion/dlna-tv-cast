@@ -24,6 +24,7 @@ class NotificationModelTest {
         assertEquals(listOf(0L, 5L, 10L), models.distinct().map { it.positionSec })
         assertEquals(1200L, models.first().durationSec)
         assertEquals(true, models.first().hasNext)
+        assertEquals(false, models.first().hasPrevious)
     }
 
     @Test
